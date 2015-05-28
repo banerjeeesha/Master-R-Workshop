@@ -1,0 +1,108 @@
+---
+title: "Master R Developer Workshop: Writing Good Functions "
+author: "Mohit Bhasin"
+date: "May 27, 2015"
+output: html_document
+---
+
+Hadley Wickham
+Chief Scientist
+Rstudio
+Wednesday, May 27, 2015 at 9:00 AM - Thursday, May 28, 2015 at 5:00 PM
+Chicago, IL
+
+#Debugging
+Use the interactive debugger, it calls setbreakpoint() which is essentially the same as calling browser()
+"Q" to quit
+```{r}
+browser()
+
+```
+
+#Robust code
+Be explicit, use TRUE, FALSE, not T,F
+Avoid functions like ```(subset, with, transform)``` because of poor error messages and eccentric behavior. likewise for ```sapply```
+
+#Practice problem
+Fix this function
+
+```{r}
+col_means <- function(df) {   
+  numeric <- sapply(df, is.numeric)   
+  numeric_cols <- df[, numeric]   
+  data.frame(lapply(numeric_cols, mean)) 
+  }
+
+head(mtcars)
+col_means(mtcars)
+# col_means(mtcars[,0]) Breaks knitr
+# col_means(mtcars[0,])
+# col_means(1:10)
+
+```
+
+sapply - sometimes give you a logical vector, sometimes it gives you a list  
+What should the output be? Ans: always be a df with one row, the colmeans of each col  
+There is no rule about strict Versus helpful, i.e how should we handle matrix vs data.frame  
+The worst thing a function can do is give the wrong output silently  
+
+```{r}
+
+col_means <- function(df) {   
+  ## CALCULATES THE MEANS OF EACH COLUMN OF A DATA FRAME
+  stopifnot(is.data.frame(df))     
+  numeric <- vapply(df, is.numeric, logical(1))
+  # You always want to do drop = FALSE
+  numeric_cols <- df[, numeric, drop = FALSE]   
+  data.frame(lapply(numeric_cols, mean)) 
+  }
+
+```
+
+Imagine you have a vector of events that you # want to divide into groups. You know when # an event ends. How could you generate a  # unique integer for each group? 
+```{r}
+x <- sample(c(TRUE, FALSE), prob = c(0.2, 0.8), 100, rep = T) # Brainstorm for 2 minutes
+```
+
+Solution 1: Too clever?
+```{r}
+cumsum(x) + 1 #incomplete solution needs some test
+```
+
+Solution ?
+```{r}
+which (x)
+```
+
+#Commenting
+Use comments to answer why, not how or what.  
+<http://adv-r.had.co.nz/Style.html>
+
+#Profiling Code
+```{r}
+library(microbenchmark)
+#install.packages("multcomp")
+x <- runif(100) 
+microbenchmark(
+  sqrt(x),
+  x ^ 0.5,   
+  exp(log(x) / 2) 
+  )
+```
+
+Your turn  
+What's the fastest way to get the bottom-right value from mtcars (i.e. 32nd from top, 11th from left)? e.g. mtcars[32, 11]
+
+```{r}
+library(microbenchmark)
+microbenchmark(   
+  mtcars["Volvo 142E", "carb"],
+  mtcars[32, 11],
+  # A DATA FRAME IS A LIST OF VECTORS
+  mtcars[[c(11, 32)]],
+  mtcars[["carb"]][32],
+  mtcars[[11]][32], # EQUIVALENT TO mtcars[[11]][[32]]
+  mtcars$carb[32],
+  .subset2(mtcars, 11)[32] 
+)
+```

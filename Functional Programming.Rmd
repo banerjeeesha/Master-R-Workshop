@@ -1,0 +1,184 @@
+---
+title: 'Master R Developer Workshop: Functional Programming'
+author: "Mohit Bhasin"
+date: "May 27, 2015"
+output: html_document
+---
+
+#DRY
+Functions first look inside their lexical scope, then looks at global 
+Use return(), only if you want to return something early, otherwise R automatically returns the last line
+This is true of most functional programming languages
+```{r}
+
+x <- 5 
+f <- function() {  
+  x <- 20
+  y <- 10
+  c(x = x, y = y) }
+f() 
+
+x <- 5 
+f <- function() {  
+  y <- 10
+  c(x = x, y = y) }
+f() 
+
+```
+
+Understanding functional environments: They vanish after excution
+
+```{r}
+
+j <- function()
+  {   if (!exists("a")) {
+    a <- 5   } 
+  else {
+    a <- a + 1   }
+  print(a) }
+j()
+j()
+
+```
+
+#Functionals
+One of the arguments of the function is another function 
+```{r}
+set.seed(1014) 
+# Create some random output: # 20 random vectors with random lengths 
+l <- replicate(3, runif(sample(1:10, 1)), simplify = FALSE)
+str(l) 
+l
+
+```
+
+
+Use ```seq_along()``` instead of ```1:length(x)```
+```{r}
+# Extract length of each element 
+
+#always specify the length of an array in a for loop in advance, extending it as you progress through the loop is inefficient
+lengths <- vector("list", length(l))
+
+for (i in seq_along(l)) {
+  lengths[[i]] <- length(l[[i]]) 
+  }
+lengths
+
+```
+
+
+#Design your first functional
+Abstract over forloops
+start by taking a specific solution that works and then generalize it
+```{r}
+# ... is a placeholder
+do_each <- function (x,f,...){
+  
+  out <- vector("list", length(x))
+  for (i in seq_along(x)) {
+    out[[i]] <- f(x[[i]],...) 
+  }
+  out
+}
+
+do_each(l,mean)
+
+```
+We just built lapply
+
+The function below scales a vector so it falls in the range [0, 1]. How would you apply it to every column of a data frame?
+
+```{r}
+scale01 <- function(x) {
+  rng <- range(x, na.rm = TRUE)   
+  (x - rng[1]) / (rng[2] - rng[1]) 
+}
+```
+
+Solution 1
+```{r}
+for (i in seq_along(mtcars)){
+  mtcars[[i]] <- scale01(mtcars[[i]])
+}
+#rm(mtcars)
+
+```
+
+Solution 2
+```{r}
+mtcars <- lapply(mtcars, scale01) 
+#mtcars # a list :( 
+rm(mtcars) 
+mtcars[] <- lapply(mtcars, scale01)  # NEAT
+#mtcars # a data frame :)
+rm(mtcars)
+```
+
+vapply always gives you a logical vector, sapply output depends on input. sapply is a wrapper around lapply. Never use sapply inside a function  
+<bit.ly/advr-chicago>
+
+#Function Operators
+They abstract away common uses of anonymous functions
+We will be skipping this, not used often
+```{r}
+library(pryr) 
+sapply(mtcars, function(x) length(unique(x)))
+sapply(mtcars, compose(length, unique))
+
+```
+
+```{r}
+x <- 0
+y <- 10
+f <- function() {   
+  x <- 1
+  function() { 
+    y <- 2
+    x + y
+  }
+}
+f()
+f()()
+```
+
+#Function Factories
+Functions can generate functions. A list can contain functions.
+<http://adv-r.had.co.nz/Functions.html>
+<http://adv-r.had.co.nz/Functional-programming.html>
+<http://adv-r.had.co.nz/Functionals.html>
+<http://adv-r.had.co.nz/Function-operators.html>
+```{r}
+# Closures are useful when you want a function 
+# that can create a whole class of functions:
+# a function factory
+power <- function(exponent) {
+  function(x) {
+    x ^ exponent  }}
+square <- power(2)
+square(2)
+square(4)
+cube <- power(3)
+cube(2)
+cube(4)
+
+square # We can find the environment and its parent
+environment(square)
+as.list(environment(square))
+as.list(environment(cube))
+
+pryr::unenclose(square)
+pryr::unenclose(cube)
+
+```
+
+
+#APPENDIX
+List of cool functions
+```{r}
+?simplify2array() #Base R function that tries to coerce a list into an array or atrix
+as.list(environment("f"))
+```
+
+
+

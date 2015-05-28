@@ -1,0 +1,116 @@
+---
+title: "Master R Developer Workshop: Object Oriented Programming"
+author: "Mohit Bhasin"
+date: "May 27, 2015"
+output: html_document
+---
+
+How do you see the source code of the %in% function? What about diag<-?If you have a column named "Income ($1000)" in your data frame called df, how can you access it with $?
+
+When using uncommon variable names use backquotes
+```{r}
+`%in%`
+`diag<-`
+
+```
+
+#Attributes
+```{r}
+x <- 1:6
+attr(x, "max") <- 5
+attr(x, "max")
+attributes(x)
+
+```
+What are factors made of? Ans: Integers
+```{r}
+f <- factor(c("a","b"))
+typeof(f)
+attributes(f)
+
+```
+What are dataframes made of? Ans: Lists
+```{r}
+df <- data.frame(x=2, y=3)
+typeof(df)
+attributes(df)
+
+```
+
+#Classes
+Say we wanted to stroe a discrete random variable, how would you store them and what would they need?
+```{r}
+x <- c(-1,0,1)
+p <- c(0.3, 0.3, 0.4)
+
+# Constraints
+all(p > 0) 
+sum(p) == 1 
+abs(sum(p) - 1) < 1e-6 
+
+# Ways to store 
+structure(x, prob = p) 
+structure(p, val = x) 
+list(x = x, p = p)
+
+# Start by defining a constructor function. It
+# uses structure to set the class attribute.
+rv <- function(x, probs = NULL) {   
+  if (is.null(probs)) {
+    probs <- rep(1, length(x)) / length(x)   
+    }
+  structure(x, probs = probs, class = "rv") } 
+
+# Also customary to create function to test if # an object is of that class: 
+is.rv <- function(x) {    inherits(x, "rv")  
+  # equivalent to "rv" %in% class(x) 
+}
+
+# And we'll also write a helper to extract probabilities
+probs <- function(x) attr(x, "probs")
+
+```
+
+What's wrong with the following objects? 
+```{r}
+rv(1:3, c(-1, 2)) 
+rv(c(1, 1), c(0.5, 0.5))
+```
+
+In R methods belong to functions not to classes or objects so you dont see rv.mean()
+```{r}
+tail(methods(class = "factor"))
+tail(methods(class ="data.frame"),5)
+
+```
+
+recommends not using "." in naming variables, except when it is actually associated with the object
+Usually start by building a print method for 
+```{r}
+print.rv <- function(x,..){
+  cat("values = ", x ,"\n", "probs =" , probs(a))
+}
+
+a = rv(1:4)
+a # now same as print_rv(a)
+```
+
+Create a mean method
+```{r}
+mean.rv <- function (x,...){
+  cat("E[x] =", sum(probs(x)*x))
+}
+mean(a) # we have now overwritten the default way mean works and applied it to behve correctly for RV. 
+```
+
+#Inheritance
+Creating the subsetting method for rvs
+```{r}
+`[.rv` <- function(x, i, ...) {
+  rv(NextMethod(), prop.table(probs(x)[i])) # NextMethod ends up calling the default method
+}
+a[1:2]
+
+```
+
+
